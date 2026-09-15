@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ไม่อนุมัติคำขอ OT</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f5f7;color:#222;font-family:Arial,"Noto Sans Thai",sans-serif}
+.container{max-width:520px;margin:0 auto;padding:20px 16px}
+.card{background:#fff;border-radius:18px;padding:22px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+h1{font-size:22px;margin:0 0 8px;text-align:center;color:#c62828}
+.desc{text-align:center;color:#666;line-height:1.5;margin:0 0 18px}
+.info{background:#f7f7f7;border-radius:11px;padding:14px;margin-bottom:18px}
+.info-row{display:flex;justify-content:space-between;gap:12px}
+.info-label{color:#666}
+label{display:block;font-weight:bold;margin-bottom:7px}
+textarea{display:block;width:100%;min-height:135px;padding:12px;border:1px solid #ccc;border-radius:10px;font:inherit;line-height:1.5;resize:vertical}
+textarea:focus{outline:none;border-color:#777}
+button{width:100%;border:0;border-radius:11px;padding:14px;margin-top:15px;font-size:16px;font-weight:bold;cursor:pointer}
+.reject-btn{background:#c62828;color:#fff}
+button:disabled{opacity:.55;cursor:not-allowed}
+.error{display:none;color:#c62828;background:#fff2f2;padding:10px;border-radius:9px;margin-top:9px;font-size:14px}
+.loading{display:none;text-align:center;color:#666;margin-top:11px}
+.success{display:none;text-align:center;padding:15px 0 0}
+.success-icon{font-size:48px}
+.success h2{margin:5px 0 8px;color:#137333}
+.success p{color:#666;line-height:1.55}
+.small{text-align:center;color:#888;font-size:12px;margin-top:14px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+
+    <div id="formArea">
+      <h1>❌ ไม่อนุมัติคำขอ OT</h1>
+      <p class="desc">กรุณาระบุเหตุผลในการไม่อนุมัติ</p>
+
+      <div class="info">
+        <div class="info-row">
+          <span class="info-label">เลขที่คำขอ OT</span>
+          <strong id="requestId">กำลังโหลด...</strong>
+        </div>
+      </div>
+
+      <label for="reason">เหตุผลที่ไม่อนุมัติ *</label>
+      <textarea id="reason" placeholder="กรุณาระบุเหตุผลที่ไม่อนุมัติ"></textarea>
+
+      <div id="error" class="error"></div>
+
+      <button id="submitButton" class="reject-btn" type="button">
+        ยืนยันไม่อนุมัติ
+      </button>
+
+      <div id="loading" class="loading">กำลังบันทึกข้อมูล...</div>
+
+      <div class="small">
+        เมื่อบันทึกแล้ว ระบบจะกลับไปหน้า LINE อัตโนมัติ
+      </div>
+    </div>
+
+    <div id="successArea" class="success">
+      <div class="success-icon">✓</div>
+      <h2>ไม่อนุมัติเรียบร้อย</h2>
+      <p>บันทึกเหตุผลเรียบร้อยแล้ว</p>
+    </div>
+
+  </div>
+</div>
+
+<iframe name="benefitsRejectFrame" id="benefitsRejectFrame" class="hidden"></iframe>
+
+<form id="rejectForm"
+      method="GET"
+      target="benefitsRejectFrame"
+      action="https://script.google.com/macros/s/AKfycbwWQXlTghLBAwlMBzIpLw7MdMrQDVluc7EfoY3Xzb20xu9IxUD6hurb_ueDjJTgVcV8/exec">
+
+  <input type="hidden" name="action" value="rejectOT">
+  <input type="hidden" name="decision" value="reject">
+  <input type="hidden" name="token" id="tokenField">
+  <input type="hidden" name="claimId" id="otIdField">
+  <input type="hidden" name="rejectionReason" id="reasonField">
+</form>
+
+<script>
+(function(){
+
+  const params = new URLSearchParams(location.search);
+
+  const token =
+    params.get('token') ||
+    params.get('approvalToken') ||
+    params.get('ApprovalTokenL1') ||
+    '';
+
+  const otId =
+    params.get('otId') ||
+    params.get('requestId') ||
+    params.get('RequestID') ||
+    params.get('id') ||
+    '';
+
+  const done = params.get('done') === '1';
+
+  const requestId = document.getElementById('requestId');
+  const reason = document.getElementById('reason');
+  const error = document.getElementById('error');
+  const submitButton = document.getElementById('submitButton');
+  const loading = document.getElementById('loading');
+
+  requestId.textContent = otId || 'ไม่พบเลขที่คำขอ';
+
+  document.getElementById('tokenField').value = token;
+  document.getElementById('otIdField').value = otId;
+
+  let leaving = false;
+
+  function returnToLine(){
+
+    if(leaving) return;
+    leaving = true;
+
+    const lineScheme = 'line://nv/chat';
+    const lineHttps = 'https://line.me/R/nv/chat';
+
+    try{
+      window.location.href = lineScheme;
+    }catch(e){}
+
+    setTimeout(function(){
+      try{
+        window.location.replace(lineHttps);
+      }catch(e){}
+    },500);
+
+    setTimeout(function(){
+      try{
+        if(document.visibilityState === 'visible'){
+          if(history.length > 1){
+            history.back();
+          }
+        }
+      }catch(e){}
+    },1800);
+  }
+
+  function showError(message){
+    error.textContent = message;
+    error.style.display = 'block';
+  }
+
+  if(done){
+    document.getElementById('formArea').style.display = 'none';
+    document.getElementById('successArea').style.display = 'block';
+    setTimeout(returnToLine,700);
+  }
+
+  submitButton.addEventListener('click',function(){
+
+    error.style.display = 'none';
+
+    const rejectionReason = reason.value.trim();
+
+    if(!token){
+      showError('ไม่พบ Approval Token กรุณาเปิดลิงก์จากปุ่ม “ไม่อนุมัติ” ใน LINE อีกครั้ง');
+      return;
+    }
+
+    if(!otId){
+      showError('ไม่พบเลขที่คำขอ กรุณาเปิดลิงก์จากปุ่ม “ไม่อนุมัติ” ใน LINE อีกครั้ง');
+      return;
+    }
+
+    if(!rejectionReason){
+      showError('กรุณาระบุเหตุผลที่ไม่อนุมัติ');
+      reason.focus();
+      return;
+    }
+
+    submitButton.disabled = true;
+    reason.disabled = true;
+    loading.style.display = 'block';
+
+    document.getElementById('reasonField').value = rejectionReason;
+
+    document.getElementById('rejectForm').submit();
+
+    setTimeout(function(){
+
+      document.getElementById('formArea').style.display = 'none';
+      document.getElementById('successArea').style.display = 'block';
+
+      setTimeout(returnToLine,700);
+
+    },1500);
+
+  });
+
+})();
+</script>
+
+</body>
+</html>
