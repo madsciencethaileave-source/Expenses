@@ -40,7 +40,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .remove{background:#fdecec;color:#c62828;padding:6px 9px;font-size:12px}
 .history{margin-top:14px}
-.history-card{border:1px solid #e4e8ec;border-radius:11px;padding:11px;margin-top:8px}
+.history-card{border:1px solid #e4e8ec;border-radius:11px;padding:11px;margin-top:8px}.detail-btn{margin-top:9px;width:100%;background:#eef1f4}.detail-panel{display:none;margin-top:10px;padding:12px;border-radius:10px;background:#f8fafc;border:1px solid #e4e8ec}.detail-row{padding:9px 0;border-bottom:1px solid #e9edf1}.detail-row:last-child{border-bottom:0}
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef1f4;font-size:12px;border:1px solid #d9dee3}.badge.approved{background:#dcfce7;color:#166534;border-color:#86efac}.badge.pending{background:#fef3c7;color:#92400e;border-color:#fcd34d}.badge.paid{background:#dbeafe;color:#1e40af;border-color:#93c5fd}.badge.rejected{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .small{font-size:12px;color:#777}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -73,6 +73,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="section-title">รายการของฉัน</div>
 <button type="button" class="secondary" id="historyBtn" style="width:100%">ดูประวัติการเบิก</button>
 <div id="history" class="history"></div>
+<div id="detailPanel" class="detail-panel"></div>
 
 <div id="message" class="message"></div>
 </div></div>
@@ -80,7 +81,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <script>
 
 const LIFF_ID = '2011365656-zd1SwZhM';
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzXJmkWE4--9DQ2wtyPUdJtGKW6ORwCVbwDWAy9xqQn91AQt3M5CT5JI0jnHeCqrTjt/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw27LW5FPAS1LLsomx1CwOTqQ3867uobtOq0ccopavqP8b8tFBiFbzP7ZqMu-y2JZM/exec';
 let idToken = '';
 
 async function initLiff() {
@@ -221,26 +222,35 @@ async function submitExpense(){
   }catch(e){showMessage('message',e.message||'เกิดข้อผิดพลาด',false);}
   finally{btn.disabled=false;btn.textContent='ส่งใบเบิก';}
 }
+async function showExpenseDetail(expenseId){
+  const panel=document.getElementById('detailPanel');
+  panel.style.display='block'; panel.innerHTML='<div class="loading">กำลังโหลดรายละเอียด...</div>';
+  try{
+    const r=await apiCall({action:'getExpenseDetail',idToken,expenseId});
+    if(!r.success) throw new Error(r.message||'โหลดรายละเอียดไม่สำเร็จ');
+    const x=r.expense||{};
+    const items=Array.isArray(x.items)?x.items:[];
+    panel.innerHTML=`<div style="font-weight:700;font-size:17px">🔎 รายละเอียด ${escapeHtml(x.expenseId||'')}</div>
+      <div class="small" style="margin-top:6px">${escapeHtml(x.date||'')} · ${Number(x.total||0).toLocaleString()} บาท</div>
+      <div style="margin-top:8px"><b>วัตถุประสงค์:</b> ${escapeHtml(x.purpose||'-')}</div>
+      ${items.map(it=>`<div class="detail-row"><b>รายการที่ ${escapeHtml(it.itemNo)}</b><div class="small">${escapeHtml(it.expenseDate||'')} · ${escapeHtml(it.expenseType||'')}</div><div>${escapeHtml(it.purpose||'-')}</div><div style="font-weight:700;margin-top:3px">${Number(it.amount||0).toLocaleString()} บาท</div>${it.receiptUrl?`<a href="${escapeHtml(it.receiptUrl)}" target="_blank">📎 ดูใบเสร็จ</a>`:''}</div>`).join('')}
+      <button type="button" class="secondary" style="width:100%;margin-top:10px" onclick="document.getElementById('detailPanel').style.display='none'">ปิดรายละเอียด</button>`;
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){panel.innerHTML='<div class="error" style="display:block">'+escapeHtml(e.message||'เกิดข้อผิดพลาด')+'</div>';}
+}
 async function loadHistory(){
   const box=document.getElementById('history'); box.innerHTML='<div class="loading">กำลังโหลด...</div>';
   const r=await apiCall({action:'getExpenseHistory',idToken});
   if(!r.success){box.textContent=r.message||'โหลดไม่สำเร็จ';return;}
   box.innerHTML=r.items.length?r.items.map(x=>{
-    const sm={'Pending Level 1':'รออนุมัติ Level 1','Pending Level 2':'รออนุมัติ Level 2','Pending Finance':'รอ Finance','Approved':'อนุมัติแล้ว','Rejected':'ไม่อนุมัติ'};
+    const sm={'Pending Level 1':'รออนุมัติ Level 1','Pending Level 2':'รออนุมัติ Supervisor1_HR','Pending Finance':'รอ Finance','Approved':'อนุมัติแล้ว','Rejected':'ไม่อนุมัติ'};
     const pm={'Pending':'รอจ่ายเงิน','Paid':'จ่ายเงินแล้ว'};
     const sc=x.status==='Approved'?'approved':(x.status==='Rejected'?'rejected':'pending');
     const pc=x.paymentStatus==='Paid'?'paid':'pending';
-    return `
-    <div class="history-card">
-      <div style="font-weight:700">${escapeHtml(x.expenseId)}</div>
-      <div class="small">${escapeHtml(x.date)} · ${Number(x.total).toLocaleString()} บาท</div>
-      <div style="margin-top:5px">${escapeHtml(x.purpose)}</div>
-      <div style="margin-top:8px">
-        <div class="small">สถานะอนุมัติ</div><span class="badge ${sc}">${escapeHtml(sm[x.status]||x.status||'-')}</span>
-        ${x.status==='Approved'?`<div class="small" style="margin-top:5px">สถานะการจ่าย</div><span class="badge ${pc}">${escapeHtml(pm[x.paymentStatus]||x.paymentStatus||'-')}</span>`:''}
-      </div>
-    </div>`;}).join(''):'ยังไม่มีรายการเบิก';
+    return `<div class="history-card"><div style="font-weight:700">${escapeHtml(x.expenseId)}</div><div class="small">${escapeHtml(x.date)} · ${Number(x.total).toLocaleString()} บาท</div><div style="margin-top:5px">${escapeHtml(x.purpose)}</div><div style="margin-top:8px"><div class="small">สถานะอนุมัติ</div><span class="badge ${sc}">${escapeHtml(sm[x.status]||x.status||'-')}</span>${x.status==='Approved'?`<div class="small" style="margin-top:5px">สถานะการจ่าย</div><span class="badge ${pc}">${escapeHtml(pm[x.paymentStatus]||x.paymentStatus||'-')}</span>`:''}</div><button type="button" class="detail-btn" onclick="showExpenseDetail('${escapeHtml(x.expenseId)}')">🔎 ดูรายละเอียดการเบิก</button></div>`;
+  }).join(''):'ยังไม่มีรายการเบิก';
 }
+
 async function pageInit(){
   document.getElementById('addItemBtn').onclick=addItem;
   document.getElementById('expenseForm').onsubmit=e=>{e.preventDefault();submitExpense();};
