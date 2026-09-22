@@ -8,7 +8,7 @@ body{margin:0;background:#f5f7f9;font-family:Arial,"Noto Sans Thai",sans-serif;c
 </style>
 </head><body><div class="wrap"><div class="card"><h2>💰 รายละเอียดใบเบิกค่าใช้จ่าย</h2><div id="app" class="loading">กำลังโหลดรายละเอียด...</div></div></div>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbxWYH8X1z8D6gbR5IZsJYLZUcWUT3S08RfAE51cDeq88_f4Z9u6ngJBA7Wh9XbmZZ2G/exec';
+const API_URL='https://script.google.com/macros/s/AKfycby53Bp68mhyIebrh5hVsS4hCGLU9EX1j35LFSfNe457RVjShIDhI6PgGYBOSif0lTMU/exec';
 const token=new URLSearchParams(location.search).get('token')||'';
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function money(v){return Number(v||0).toLocaleString('th-TH',{minimumFractionDigits:2});}
