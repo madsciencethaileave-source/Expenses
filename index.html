@@ -43,6 +43,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .history-card{border:1px solid #e4e8ec;border-radius:11px;padding:11px;margin-top:8px}
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef1f4;font-size:12px;border:1px solid #d9dee3}.badge.approved{background:#dcfce7;color:#166534;border-color:#86efac}.badge.pending{background:#fef3c7;color:#92400e;border-color:#fcd34d}.badge.paid{background:#dbeafe;color:#1e40af;border-color:#93c5fd}.badge.rejected{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .small{font-size:12px;color:#777}
+.tax-invoice{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;background:#fff;border:1px solid #e4e8ec;border-radius:10px;cursor:pointer}
+.tax-invoice input[type="checkbox"]{width:20px;height:20px;margin:0;accent-color:#111}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 @media(max-width:380px){.container{padding:10px}.card{padding:15px}.row{gap:7px}}
 </style>
@@ -80,7 +82,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <script>
 
 const LIFF_ID = '2011365656-zd1SwZhM';
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby53Bp68mhyIebrh5hVsS4hCGLU9EX1j35LFSfNe457RVjShIDhI6PgGYBOSif0lTMU/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyfRUyjfW6hLsBB2j8VQzgp1pHZGGzpPlR0h8fzuBNRQ4cFddG-eU8hErbnzOj4peJF/exec';
 let idToken = '';
 
 async function initLiff() {
@@ -155,7 +157,11 @@ function addItem(){
     <input type="text" class="item-purpose" placeholder="รายละเอียดรายการ">
     <label>ใบเสร็จ</label>
     <input type="file" class="receipt" accept="image/*,application/pdf">
-    <div class="small">แนะนำไฟล์ไม่เกิน 8 MB</div>`;
+    <div class="small">แนะนำไฟล์ไม่เกิน 8 MB</div>
+    <label class="tax-invoice">
+      <input type="checkbox" class="has-tax-invoice">
+      <span>มีใบกำกับภาษี</span>
+    </label>`;
   el.querySelector('.remove').onclick=()=>{el.remove();renumber();calcTotal();};
   el.querySelector('.amount').addEventListener('input',calcTotal);
   document.getElementById('items').appendChild(el);
@@ -207,6 +213,7 @@ async function submitExpense(){
         expenseType:el.querySelector('.expense-type').value,
         amount:Number(el.querySelector('.amount').value),
         purpose:el.querySelector('.item-purpose').value.trim(),
+        hasTaxInvoice:el.querySelector('.has-tax-invoice').checked,
         receiptBase64:rf?.base64||'',
         receiptName:rf?.name||'',
         receiptMimeType:rf?.mime||''
@@ -257,6 +264,7 @@ async function toggleExpenseDetail(btn, expenseId){
       '<div><b>รายการ '+escapeHtml(it.itemNo)+'</b> · '+escapeHtml(it.expenseType||'-')+'</div>'+
       '<div class="small">'+escapeHtml(it.expenseDate||'')+'</div>'+
       '<div>'+escapeHtml(it.purpose||'-')+'</div>'+
+      '<div style="margin-top:5px">🧾 '+escapeHtml(it.taxInvoiceStatus || (it.hasTaxInvoice ? 'มีใบกำกับภาษี' : 'ไม่มีใบกำกับภาษี'))+'</div>'+
       '<div style="font-weight:700">'+Number(it.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2})+' บาท</div>'+
       (it.receiptUrl?'<a href="'+escapeHtml(it.receiptUrl)+'" target="_blank" rel="noopener">📎 ดูใบเสร็จ</a>':'')+
       '</div>').join('')+
